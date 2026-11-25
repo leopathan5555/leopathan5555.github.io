@@ -59,12 +59,12 @@ h2{font-size:clamp(28px,4vw,40px);margin-bottom:28px}
 .graph p{margin:8px 4px 0;font-size:14px;color:var(--muted)}
 .e{stroke:var(--line);stroke-width:2}
 .e.t{stroke:var(--amber);stroke-width:4}
-.w{font-size:11px;fill:var(--muted)}
+.w{font:600 11px var(--bd);fill:var(--muted);text-anchor:middle;dominant-baseline:central;pointer-events:none}.wb{fill:var(--surface)}
 .n{fill:var(--surface);stroke:var(--ink);stroke-width:2;cursor:pointer}
 .n.src{fill:var(--blue);stroke:var(--blue)}
 .nl{font:700 13px var(--hd);fill:var(--ink);pointer-events:none;text-anchor:middle}
 .src+.nl{fill:var(--bg)}
-.d{font:700 12px var(--bd);fill:var(--amber);text-anchor:middle;pointer-events:none}
+.d{font:700 12px var(--bd);fill:var(--amber);text-anchor:middle;dominant-baseline:central;paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
 .box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px}
 .box h3{font-size:22px;margin-bottom:6px}
@@ -161,6 +161,10 @@ nav a{transition:color .2s,background .2s}
 #lbx{transition:transform .25s ease}
 #lbx:hover{transform:rotate(90deg)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after,#lb::backdrop{animation:none!important;transition:none!important}.js .rv,.js .box .tags li{opacity:1;transform:none}}
+#theme svg{display:block;margin:auto;transition:transform .7s cubic-bezier(.3,1.4,.4,1)}
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+::view-transition-old(root){z-index:1}::view-transition-new(root){z-index:2}
+.tt,.tt *,.tt *::before,.tt *::after{transition:background-color .45s ease,color .45s ease,border-color .45s ease,fill .45s ease,stroke .45s ease!important}
 </style>
 </head>
 <body>
@@ -179,7 +183,7 @@ nav a{transition:color .2s,background .2s}
 </ul>
 </nav>
 <div class="tools">
-<button class="ib" id="theme" aria-label="Switch light or dark theme">◐</button>
+<button class="ib" id="theme" aria-label="Switch light or dark theme"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg></button>
 <button class="ib" id="menu" aria-expanded="false" aria-controls="nav" aria-label="Open menu">☰</button>
 </div>
 </div>
@@ -316,6 +320,21 @@ nav a{transition:color .2s,background .2s}
 var P={A:[50,60],B:[150,30],C:[140,130],D:[260,50],E:[250,160],F:[350,100],G:[80,205]};
 var E=[["A","B",4],["A","C",2],["B","C",1],["B","D",5],["C","E",8],["C","G",6],["D","E",3],["D","F",6],["E","F",2],["G","E",9]];
 var svg=document.getElementById("g"),cap=document.getElementById("gc");
+var L={};
+(function(){
+function seg(px,py,a,b){var dx=b[0]-a[0],dy=b[1]-a[1],t=((px-a[0])*dx+(py-a[1])*dy)/(dx*dx+dy*dy);t=Math.max(0,Math.min(1,t));return Math.hypot(px-a[0]-t*dx,py-a[1]-t*dy)}
+var placed=[];
+Object.keys(P).forEach(function(k){var best=null,bs=-1e9;
+for(var ang=0;ang<360;ang+=15){var x=P[k][0]+29*Math.cos(ang*Math.PI/180),y=P[k][1]+29*Math.sin(ang*Math.PI/180);
+if(x<14||x>386||y<10||y>240)continue;
+var sc=1e9;
+E.forEach(function(e){var a=P[e[0]],b=P[e[1]];sc=Math.min(sc,seg(x,y,a,b)-8,Math.hypot(x-(a[0]+b[0])/2,y-(a[1]+b[1])/2)-18)});
+for(var n in P)if(n!==k)sc=Math.min(sc,Math.hypot(x-P[n][0],y-P[n][1])-22);
+placed.forEach(function(q){sc=Math.min(sc,Math.hypot(x-q[0],y-q[1])-18)});
+sc-=Math.abs(ang-90)/360*2;
+if(sc>bs){bs=sc;best=[x,y]}}
+L[k]=best||[P[k][0],P[k][1]+30];placed.push(L[k])});
+})();
 function run(s,keep){
 var d={},prev={},done={},k;
 for(k in P)d[k]=Infinity;d[s]=0;
@@ -326,8 +345,10 @@ if(v&&d[u]+e[2]<d[v]){d[v]=d[u]+e[2];prev[v]=u}})}
 var h="";
 E.forEach(function(e){var a=P[e[0]],b=P[e[1]],t=prev[e[0]]===e[1]||prev[e[1]]===e[0];
 h+='<line pathLength="1" class="e'+(t?' t':'')+'" x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"/>';
-h+='<text class="w" x="'+((a[0]+b[0])/2+6)+'" y="'+((a[1]+b[1])/2-4)+'">'+e[2]+'</text>'});
-for(k in P){h+='<g tabindex="0" role="button" aria-label="Run from node '+k+'" data-k="'+k+'"><circle class="n'+(k===s?' src':'')+'" cx="'+P[k][0]+'" cy="'+P[k][1]+'" r="16"/><text class="nl" x="'+P[k][0]+'" y="'+(P[k][1]+5)+'">'+k+'</text><text class="d" x="'+P[k][0]+'" y="'+(P[k][1]+32)+'">'+d[k]+'</text></g>'}
+});
+E.forEach(function(e){var a=P[e[0]],b=P[e[1]],x=(a[0]+b[0])/2,y=(a[1]+b[1])/2;
+h+='<rect class="wb" x="'+(x-10)+'" y="'+(y-9)+'" width="20" height="18" rx="5"/><text class="w" x="'+x+'" y="'+y+'">'+e[2]+'</text>'});
+for(k in P){h+='<g tabindex="0" role="button" aria-label="Run from node '+k+'" data-k="'+k+'"><circle class="n'+(k===s?' src':'')+'" cx="'+P[k][0]+'" cy="'+P[k][1]+'" r="16"/><text class="nl" x="'+P[k][0]+'" y="'+(P[k][1]+5)+'">'+k+'</text><text class="d" x="'+L[k][0]+'" y="'+L[k][1]+'">'+d[k]+'</text></g>'}
 svg.innerHTML=h;if(keep){var f=svg.querySelector('g[data-k="'+s+'"]');if(f)f.focus()}
 cap.textContent="Shortest distances from node "+s+" are shown under each node. Amber edges form the shortest-path tree.";
 }
@@ -371,9 +392,18 @@ if(on){a.classList.remove("pop");void a.offsetWidth;a.style.setProperty("--p",(v
 
 var root=document.documentElement;
 try{var t=localStorage.getItem("theme");if(t)root.setAttribute("data-theme",t)}catch(x){}
-document.getElementById("theme").onclick=function(){
+var tbtn=document.getElementById("theme"),ticon=tbtn.querySelector("svg"),rot=0;
+tbtn.onclick=function(){
 var dark=root.getAttribute("data-theme")==="dark"||(!root.getAttribute("data-theme")&&matchMedia("(prefers-color-scheme: dark)").matches);
-var n=dark?"light":"dark";root.setAttribute("data-theme",n);try{localStorage.setItem("theme",n)}catch(x){}};
+var n=dark?"light":"dark";
+function apply(){root.setAttribute("data-theme",n);try{localStorage.setItem("theme",n)}catch(x){}}
+rot+=180;ticon.style.transform="rotate("+rot+"deg)";
+if(reduce()){apply();return}
+if(!document.startViewTransition){root.classList.add("tt");apply();setTimeout(function(){root.classList.remove("tt")},500);return}
+var r=tbtn.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,
+R=Math.hypot(Math.max(x,innerWidth-x),Math.max(y,innerHeight-y));
+var vt=document.startViewTransition(apply);
+vt.ready.then(function(){root.animate({clipPath:["circle(0px at "+x+"px "+y+"px)","circle("+R+"px at "+x+"px "+y+"px)"]},{duration:700,easing:"cubic-bezier(.4,0,.2,1)",pseudoElement:"::view-transition-new(root)"})}).catch(function(){})};
 var lb=document.getElementById("lb"),lbi=lb.querySelector("img"),lastT=null;
 function flipFrom(t,r){var a=t.getBoundingClientRect(),vis=a.bottom>0&&a.top<innerHeight&&a.width>0;
 var dx=vis?a.left+a.width/2-(r.left+r.width/2):0,dy=vis?a.top+a.height/2-(r.top+r.height/2):0,s=vis?Math.max(.1,Math.min(1,a.width/r.width)):.9;
